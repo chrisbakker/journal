@@ -124,6 +124,10 @@ test-api: ## Test API endpoints
 	@echo "\nListing entries..."
 	@curl -s http://localhost:$(PORT)/api/days/2025-11-20/entries | jq .
 
+seed-data: ## Generate test data (3000 entries across 365 days)
+	@echo "$(GREEN)Generating test data...$(NC)"
+	@go run ./cmd/seed
+
 ## Cleanup
 
 clean: ## Remove build artifacts
