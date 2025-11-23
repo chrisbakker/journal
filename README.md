@@ -105,6 +105,7 @@ If you value **privacy, speed, and AI assistance** without giving up control of 
 - **PostgreSQL 16+** with pgvector extension
 - **Ollama** (for AI features)
 - **Node.js 18+** (for building frontend)
+- **Docker or Podman** (recommended for database)
 
 ### Installation
 
@@ -115,38 +116,42 @@ If you value **privacy, speed, and AI assistance** without giving up control of 
    ```
 
 2. **Set up the database**
+   
+   **Option A: Automated setup with Docker/Podman (recommended)**
    ```bash
-   # Start PostgreSQL (example with Docker)
-   docker run -d \
-     --name journal-postgres \
-     -e POSTGRES_PASSWORD=journaldev \
-     -e POSTGRES_USER=journal \
-     -e POSTGRES_DB=journal \
-     -p 5432:5432 \
-     postgres:16-alpine
-
-   # Run migrations
-   make migrate
+   ./scripts/setup-database-container.sh
    ```
 
-3. **Install Ollama and pull models**
+   **Option B: Use existing PostgreSQL**
+   ```bash
+   ./scripts/setup-database.sh
+   ```
+   
+   See [scripts/README.md](scripts/README.md) for detailed database setup documentation.
+
+3. **Run database migrations**
+   ```bash
+   make db-migrate-up
+   ```
+
+4. **Install Ollama and pull models**
    ```bash
    # Install Ollama (see https://ollama.ai)
    ollama pull nomic-embed-text
    ollama pull llama3.2
    ```
 
-4. **Build and run**
+5. **Build and run**
    ```bash
    make run
    ```
 
-5. **Open your browser**
+6. **Open your browser**
    ```
    http://localhost:8080
    ```
 
-6. **Complete the setup wizard**
+7. **Complete the setup wizard**
    - Enter your database connection details
    - Configure Ollama URL and models
    - Start journaling!

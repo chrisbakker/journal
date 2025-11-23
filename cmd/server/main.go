@@ -13,6 +13,9 @@ import (
 	"github.com/chrisbakker/journal/vectorservice"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -30,6 +33,43 @@ type AppResources struct {
 
 func main() {
 	runServer()
+}
+
+// runMigrations executes database migrations
+func runMigrations(databaseURL string) error {
+	m, err := migrate.New(
+		"file://db/migrations",
+		databaseURL,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create migration instance: %w", err)
+	}
+	defer m.Close()
+
+	// Get current version
+	version, dirty, err := m.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		log.Printf("⚠️  Unable to get current migration version: %v\n", err)
+	} else if err == migrate.ErrNilVersion {
+		log.Println("📋 No migrations applied yet")
+	} else {
+		log.Printf("📋 Current migration version: %d (dirty: %v)\n", version, dirty)
+	}
+
+	// Run migrations
+	if err := m.Up(); err != nil {
+		if err == migrate.ErrNoChange {
+			log.Println("✅ Database schema is up to date")
+			return nil
+		}
+		return fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	// Get new version
+	version, _, _ = m.Version()
+	log.Printf("✅ Migrations completed successfully (version: %d)\n", version)
+
+	return nil
 }
 
 // Reload reloads configuration and reconnects to all resources
@@ -79,6 +119,14 @@ func (app *AppResources) Reload() error {
 		return fmt.Errorf("failed to ping database: %w", err)
 	}
 	log.Println("✅ Reconnected to database successfully")
+
+	// Run database migrations
+	if err := runMigrations(newCfg.Database.URL); err != nil {
+		log.Printf("⚠️  Database migration error: %v\n", err)
+		log.Println("Database may not be fully initialized")
+	} else {
+		log.Println("✅ Database migrations completed")
+	}
 
 	// Create new queries
 	queries := db.New(dbpool)
@@ -193,6 +241,14 @@ func runServer() {
 			} else {
 				log.Println("Connected to database successfully")
 
+				// Run database migrations
+				if err := runMigrations(cfg.Database.URL); err != nil {
+					log.Printf("⚠️  Database migration error: %v\n", err)
+					log.Println("Database may not be fully initialized")
+				} else {
+					log.Println("✅ Database migrations completed")
+				}
+
 				// Create queries
 				queries = db.New(dbpool)
 
@@ -215,9 +271,7 @@ func runServer() {
 				}
 			}
 		}
-	}
-
-	// Store resources in app
+	} // Store resources in app
 	app.config = cfg
 	app.dbpool = dbpool
 	app.queries = queries

@@ -40,8 +40,9 @@ db-start: ## Start PostgreSQL container
 		-e POSTGRES_PASSWORD=journaldev \
 		-e POSTGRES_USER=journal \
 		-e POSTGRES_DB=journal \
+		-e POSTGRES_HOST_AUTH_METHOD=trust \
 		-p 5432:5432 \
-		postgres:16-alpine
+		pgvector/pgvector:pg16
 	@sleep 2
 	@podman exec journal-postgres pg_isready -U journal
 
