@@ -20,6 +20,15 @@ type Attachment struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type Attendee struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	LastUsed  pgtype.Timestamptz `json:"last_used"`
+	UseCount  int32              `json:"use_count"`
+}
+
 type Entry struct {
 	ID                pgtype.UUID         `json:"id"`
 	UserID            pgtype.UUID         `json:"user_id"`

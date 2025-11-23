@@ -243,6 +243,14 @@ func runServer() {
 		MaxAge:           cfg.CORS.MaxAge,
 	}))
 
+	// Disable caching for API responses
+	router.Use(func(c *gin.Context) {
+		c.Header("Cache-Control", "no-cache, no-store, must-revalidate")
+		c.Header("Pragma", "no-cache")
+		c.Header("Expires", "0")
+		c.Next()
+	})
+
 	// API routes - use closures to always get current resources from app
 	apiGroup := router.Group("/api")
 	{
@@ -301,6 +309,15 @@ func runServer() {
 			}
 			handler := api.NewHandler(app.getQueries(), app.getConfig().App.DefaultTimezone, app.getVectorService(), app.getOllamaClient())
 			handler.SearchEntries(c)
+		})
+
+		// Attendees autocomplete
+		apiGroup.GET("/attendees/search", func(c *gin.Context) {
+			if !requireResources(c) {
+				return
+			}
+			handler := api.NewHandler(app.getQueries(), app.getConfig().App.DefaultTimezone, app.getVectorService(), app.getOllamaClient())
+			handler.SearchAttendees(c)
 		})
 
 		// Chat (Phase 3 - RAG)

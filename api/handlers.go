@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -140,6 +141,9 @@ func (h *Handler) CreateEntry(c *gin.Context) {
 	attendees := normalizeAttendees(req.AttendeesOriginal)
 	userID := h.getDefaultUserID(c)
 
+	// Record attendees in the attendees table
+	h.recordAttendees(c.Request.Context(), userID, attendees)
+
 	entry, err := h.queries.CreateEntry(c.Request.Context(), db.CreateEntryParams{
 		UserID:            userID,
 		Title:             req.Title,
@@ -205,6 +209,8 @@ func (h *Handler) UpdateEntry(c *gin.Context) {
 	if req.AttendeesOriginal != nil {
 		attendeesOriginal = *req.AttendeesOriginal
 		attendees = normalizeAttendees(*req.AttendeesOriginal)
+		// Record attendees in the attendees table
+		h.recordAttendees(c.Request.Context(), existing.UserID, attendees)
 	}
 	if req.Type != nil {
 		if *req.Type != "meeting" && *req.Type != "notes" && *req.Type != "other" {
@@ -665,4 +671,62 @@ func stripHTMLTags(html string) string {
 	}
 
 	return strings.TrimSpace(result.String())
+}
+
+// recordAttendees records attendees in the attendees table for autocomplete
+func (h *Handler) recordAttendees(ctx context.Context, userID pgtype.UUID, attendees []string) {
+	for _, name := range attendees {
+		if name == "" {
+			continue
+		}
+		_, err := h.queries.GetOrCreateAttendee(ctx, db.GetOrCreateAttendeeParams{
+			UserID: userID,
+			Name:   name,
+		})
+		if err != nil {
+			log.Printf("Error recording attendee %s: %v", name, err)
+			// Don't fail the entire operation if attendee recording fails
+		}
+	}
+}
+
+// SearchAttendees provides autocomplete suggestions for attendee names
+func (h *Handler) SearchAttendees(c *gin.Context) {
+	query := c.Query("q")
+	userID := h.getDefaultUserID(c)
+
+	var suggestions []string
+
+	if query == "" {
+		// No query - return recent attendees
+		results, err := h.queries.GetRecentAttendees(c.Request.Context(), db.GetRecentAttendeesParams{
+			UserID: userID,
+			Limit:  10,
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get attendees"})
+			return
+		}
+		suggestions = make([]string, len(results))
+		for i, result := range results {
+			suggestions[i] = result.Name
+		}
+	} else {
+		// Search by prefix
+		results, err := h.queries.SearchAttendees(c.Request.Context(), db.SearchAttendeesParams{
+			UserID: userID,
+			Limit:  10,
+			Query:  pgtype.Text{String: query, Valid: true},
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search attendees"})
+			return
+		}
+		suggestions = make([]string, len(results))
+		for i, result := range results {
+			suggestions[i] = result.Name
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"suggestions": suggestions})
 }

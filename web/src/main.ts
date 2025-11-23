@@ -32,6 +32,8 @@ class JournalApp {
   private autoSaveTimer: number | null = null;
   private searchQuery: string = '';
   private chatCitations: Map<string, Entry[]> = new Map(); // messageId -> cited entries
+  private attendeesAutocomplete: HTMLElement | null = null;
+  private autocompleteTimeout: number | null = null;
 
   constructor() {
     this.currentDate = new Date();
@@ -769,12 +771,18 @@ class JournalApp {
     attendeesField.className = 'form-field';
     attendeesField.innerHTML = `
       <label>Attendees (comma-separated)</label>
-      <input type="text" id="entry-attendees" value="${entry.attendees_original}" placeholder="Alice, Bob, Carol">
+      <input type="text" id="entry-attendees" value="${entry.attendees_original}" placeholder="Alice, Bob, Carol" autocomplete="off">
     `;
 
     formFields.appendChild(typeField);
     formFields.appendChild(attendeesField);
     card.appendChild(formFields);
+
+    // Setup autocomplete for attendees
+    const attendeesInput = attendeesField.querySelector('#entry-attendees') as HTMLInputElement;
+    if (attendeesInput) {
+      this.setupAttendeesAutocomplete(attendeesInput);
+    }
 
     // Actions
     const actions = document.createElement('div');
@@ -1147,6 +1155,116 @@ class JournalApp {
         errorEl.classList.remove('hidden');
       }
     }
+  }
+
+  private async searchAttendees(query: string): Promise<string[]> {
+    try {
+      const response = await fetch(`${API_BASE}/attendees/search?q=${encodeURIComponent(query)}`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.suggestions || [];
+    } catch (error) {
+      console.error('Failed to search attendees:', error);
+      return [];
+    }
+  }
+
+  private showAttendeesAutocomplete(input: HTMLInputElement, suggestions: string[]) {
+    this.hideAttendeesAutocomplete();
+
+    if (suggestions.length === 0) return;
+
+    const autocomplete = document.createElement('div');
+    autocomplete.className = 'attendees-autocomplete';
+    
+    suggestions.forEach(suggestion => {
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      item.textContent = suggestion;
+      item.onmousedown = (e) => {
+        // Use mousedown instead of click to fire before blur
+        e.preventDefault();
+        const currentValue = input.value;
+        const lastComma = currentValue.lastIndexOf(',');
+        
+        if (lastComma >= 0) {
+          // Replace the last name after comma
+          input.value = currentValue.substring(0, lastComma + 1) + ' ' + suggestion + ', ';
+        } else {
+          // Replace entire value
+          input.value = suggestion + ', ';
+        }
+        
+        this.hideAttendeesAutocomplete();
+        input.focus();
+        this.scheduleAutoSave();
+      };
+      autocomplete.appendChild(item);
+    });
+
+    // Position it relative to the input's parent for better positioning
+    const fieldContainer = input.closest('.form-field') as HTMLElement;
+    if (fieldContainer) {
+      fieldContainer.style.position = 'relative';
+      autocomplete.style.position = 'absolute';
+      autocomplete.style.left = '0';
+      autocomplete.style.right = '0';
+      autocomplete.style.top = `${input.offsetTop + input.offsetHeight}px`;
+      fieldContainer.appendChild(autocomplete);
+    } else {
+      // Fallback to body positioning
+      const rect = input.getBoundingClientRect();
+      autocomplete.style.position = 'fixed';
+      autocomplete.style.left = `${rect.left}px`;
+      autocomplete.style.top = `${rect.bottom}px`;
+      autocomplete.style.width = `${rect.width}px`;
+      document.body.appendChild(autocomplete);
+    }
+
+    this.attendeesAutocomplete = autocomplete;
+  }
+
+  private hideAttendeesAutocomplete() {
+    if (this.attendeesAutocomplete) {
+      this.attendeesAutocomplete.remove();
+      this.attendeesAutocomplete = null;
+    }
+  }
+
+  private setupAttendeesAutocomplete(input: HTMLInputElement) {
+    input.addEventListener('input', () => {
+      if (this.autocompleteTimeout) {
+        clearTimeout(this.autocompleteTimeout);
+      }
+
+      const value = input.value;
+      // Get the text after the last comma (current name being typed)
+      const lastComma = value.lastIndexOf(',');
+      const currentName = lastComma >= 0 
+        ? value.substring(lastComma + 1).trim() 
+        : value.trim();
+
+      if (currentName.length < 1) {
+        this.hideAttendeesAutocomplete();
+        return;
+      }
+
+      this.autocompleteTimeout = window.setTimeout(async () => {
+        const suggestions = await this.searchAttendees(currentName);
+        this.showAttendeesAutocomplete(input, suggestions);
+      }, 200);
+    });
+
+    input.addEventListener('blur', () => {
+      // Delay to allow clicking on autocomplete items
+      setTimeout(() => this.hideAttendeesAutocomplete(), 200);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.hideAttendeesAutocomplete();
+      }
+    });
   }
 }
 
