@@ -1,0 +1,38 @@
+# Journal Application Configuration
+# This file is typically located at:
+#   macOS: ~/Library/Application Support/journal/config.yaml
+#   Linux: ~/.config/journal/config.yaml  
+#   Windows: %APPDATA%\journal\config.yaml
+#
+# You can also use environment variables to override any setting.
+# Example: export DATABASE_URL="postgresql://..."
+
+server:
+  port: "8080"
+  env: "development"  # development or production
+
+database:
+  url: "postgresql://journal:journaldev@localhost:5432/journal?sslmode=disable"
+
+spa:
+  mode: "fs"        # fs (filesystem) or embed (embedded files)
+  dir: "web/dist"   # path to built frontend files
+
+app:
+  defaulttimezone: "America/New_York"
+
+llm:
+  provider: "ollama"
+  ollamabaseurl: "http://localhost:11434"
+  embeddingmodel: "nomic-embed-text"
+  chatmodel: "llama3.2"
+  vectordimensions: 768
+  updateinterval: 1m0s  # 60 seconds
+  enablevectorsearch: true
+
+cors:
+  allowedorigins:
+    - "http://localhost:5173"
+    - "http://localhost:8080"
+  allowcredentials: true
+  maxage: 12h0m0s
