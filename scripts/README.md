@@ -1,69 +1,50 @@
 # Database Setup
 
-This directory contains scripts to set up the PostgreSQL database for the Journal application.
+This directory contains a script to set up the PostgreSQL database for the Journal application.
 
 ## Prerequisites
 
 - PostgreSQL 16+ with pgvector extension support
-- For container setup: Docker or Podman
+- `golang-migrate` CLI tool for running migrations
 
 ## Quick Start
 
-### Option 1: Using Docker/Podman (Recommended)
-
-This is the easiest way to get started:
-
-```bash
-# Make the script executable
-chmod +x scripts/setup-database-container.sh
-
-# Run the setup
-./scripts/setup-database-container.sh
-```
-
-This will:
-- Pull the `pgvector/pgvector:pg16` image
-- Start a PostgreSQL container with pgvector pre-installed
-- Create the database and user
-- Install required extensions (vector, citext)
-- Expose PostgreSQL on port 5432
-
-### Option 2: Using Existing PostgreSQL
-
-If you already have PostgreSQL installed:
+The setup script handles everything in one go:
 
 ```bash
 # Make the script executable
 chmod +x scripts/setup-database.sh
 
-# Run the setup
+# Run the setup (will prompt for postgres password if needed)
 ./scripts/setup-database.sh
 ```
 
-You may need to provide credentials via environment variables:
+The script will:
+1. Create the database and user
+2. Grant necessary privileges
+3. Install required extensions (vector, citext)
+4. Run all migrations
+5. Create the default user
+
+If you don't have `golang-migrate` installed, you can run migrations manually after the initial setup:
 
 ```bash
-export POSTGRES_USER=postgres
-export POSTGRES_PASSWORD=yourpassword
-export DB_HOST=localhost
-export DB_PORT=5432
-./scripts/setup-database.sh
+make db-migrate-up
 ```
 
 ## Configuration
 
-Both scripts support environment variables for customization:
+The setup script supports environment variables for customization:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DB_NAME` | `journal` | Database name |
 | `DB_USER` | `journal` | Application database user |
 | `DB_PASSWORD` | `journaldev` | Application user password |
-| `DB_HOST` | `localhost` | Database host (setup-database.sh only) |
+| `DB_HOST` | `localhost` | Database host |
 | `DB_PORT` | `5432` | Database port |
 | `POSTGRES_USER` | `postgres` | PostgreSQL superuser |
-| `POSTGRES_PASSWORD` | _(empty)_ | Superuser password |
-| `CONTAINER_NAME` | `journal-postgres` | Container name (setup-database-container.sh only) |
+| `POSTGRES_PASSWORD` | _(prompts if empty)_ | Superuser password |
 
 Example with custom settings:
 
@@ -71,27 +52,22 @@ Example with custom settings:
 export DB_NAME=myjournal
 export DB_USER=myuser
 export DB_PASSWORD=securepassword
-./scripts/setup-database-container.sh
+export POSTGRES_PASSWORD=mypostgrespass
+./scripts/setup-database.sh
 ```
+
+If `POSTGRES_PASSWORD` is not set, the script will prompt you once at the beginning.
 
 ## After Setup
 
-Once the database is set up, you need to:
+The setup script automatically runs migrations and creates the default user. After it completes, you can:
 
-1. **Run migrations to create tables:**
-   ```bash
-   make db-migrate-up
-   ```
+**Start the application:**
+```bash
+make run
+```
 
-2. **Create the default user:**
-   ```bash
-   ./scripts/create-default-user.sh
-   ```
-
-3. **Start the application:**
-   ```bash
-   make run
-   ```
+Then open http://localhost:8080 in your browser.
 
 ## Manual Setup (Advanced)
 
@@ -121,14 +97,19 @@ If you prefer to set up manually or need to customize:
    make db-migrate-up
    ```
 
+5. **Create the default user:**
+   ```sql
+   INSERT INTO users (id, email, display_name) 
+   VALUES ('02a0aa58-b88a-46f1-9799-f103e04c0b72', 'user@journal.local', 'Default User');
+   ```
+
 ## Troubleshooting
 
 ### pgvector not available
 
 If you get "extension vector is not available":
 
-- **Docker/Podman:** Make sure you're using `pgvector/pgvector:pg16` image
-- **Existing PostgreSQL:** Install pgvector extension:
+- Install pgvector extension:
   ```bash
   # macOS
   brew install pgvector
@@ -166,24 +147,6 @@ migrate -path db/migrations -database "your-connection-string" force X
 
 # Then run migrations again
 migrate -path db/migrations -database "your-connection-string" up
-```
-
-## Container Management
-
-If using the container setup:
-
-```bash
-# Stop the database
-podman stop journal-postgres
-
-# Start the database
-podman start journal-postgres
-
-# View logs
-podman logs journal-postgres
-
-# Remove completely
-podman rm -f journal-postgres
 ```
 
 ## Security Notes

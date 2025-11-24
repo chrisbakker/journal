@@ -117,42 +117,32 @@ If you value **privacy, speed, and AI assistance** without giving up control of 
 
 2. **Set up the database**
    
-   **Option A: Automated setup with Docker/Podman (recommended)**
-   ```bash
-   ./scripts/setup-database-container.sh
-   ```
-
-   **Option B: Use existing PostgreSQL**
+   The setup script handles everything (database, extensions, migrations, default user):
+   
    ```bash
    ./scripts/setup-database.sh
    ```
    
    See [scripts/README.md](scripts/README.md) for detailed database setup documentation.
 
-3. **Run database migrations**
-   ```bash
-   make db-migrate-up
-   ```
-
-4. **Install Ollama and pull models**
+3. **Install Ollama and pull models**
    ```bash
    # Install Ollama (see https://ollama.ai)
    ollama pull nomic-embed-text
    ollama pull llama3.2
    ```
 
-5. **Build and run**
+4. **Build and run**
    ```bash
    make run
    ```
 
-6. **Open your browser**
+5. **Open your browser**
    ```
    http://localhost:8080
    ```
 
-7. **Complete the setup wizard**
-   - Enter your database connection details
+6. **Complete the setup wizard**
    - Configure Ollama URL and models
    - Start journaling!
 
