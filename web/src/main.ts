@@ -4,7 +4,8 @@ import QuillBetterTable from 'quill-better-table';
 import 'quill-better-table/dist/quill-better-table.css';
 import './style.css';
 
-const API_BASE = 'http://localhost:8080/api';
+// Use relative path for API calls - works regardless of port mapping
+const API_BASE = '/api';
 
 interface Entry {
   id: string;
