@@ -9,13 +9,9 @@ This directory contains a script to set up the PostgreSQL database for the Journ
 
 ## Quick Start
 
-The setup script handles everything in one go:
+Run the setup script (will prompt for postgres password if needed):
 
 ```bash
-# Make the script executable
-chmod +x scripts/setup-database.sh
-
-# Run the setup (will prompt for postgres password if needed)
 ./scripts/setup-database.sh
 ```
 

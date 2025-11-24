@@ -105,7 +105,7 @@ If you value **privacy, speed, and AI assistance** without giving up control of 
 - **PostgreSQL 16+** with pgvector extension
 - **Ollama** (for AI features)
 - **Node.js 18+** (for building frontend)
-- **Docker or Podman** (recommended for database)
+- **Docker or Podman** (optional, for database)
 
 ### Installation
 
@@ -117,13 +117,12 @@ If you value **privacy, speed, and AI assistance** without giving up control of 
 
 2. **Set up the database**
    
-   The setup script handles everything (database, extensions, migrations, default user):
-   
    ```bash
+   # Set up PostgreSQL with pgvector
    ./scripts/setup-database.sh
    ```
    
-   See [scripts/README.md](scripts/README.md) for detailed database setup documentation.
+   See [scripts/README.md](scripts/README.md) for database configuration options.
 
 3. **Install Ollama and pull models**
    ```bash
@@ -133,9 +132,18 @@ If you value **privacy, speed, and AI assistance** without giving up control of 
    ```
 
 4. **Build and run**
+   
+   **Option A: Run locally**
    ```bash
    make run
    ```
+   
+   **Option B: Run in Docker**
+   ```bash
+   docker compose up -d
+   ```
+   
+   See [docs/DOCKER.md](docs/DOCKER.md) for Docker deployment details.
 
 5. **Open your browser**
    ```
